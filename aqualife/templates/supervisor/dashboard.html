@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block title %}Supervisor Dashboard{% endblock %}
+{% block page_title %}Supervisor Dashboard{% endblock %}
+
+{% block content %}
+<div class="row g-3 mb-4">
+  <div class="col-sm-6 col-xl-3">
+    <div class="stat-card">
+      <div class="stat-icon">🕒</div>
+      <div class="stat-label">Pending Deliveries</div>
+      <div class="stat-value">{{ pending }}</div>
+      <div class="stat-sub">Awaiting driver assignment</div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-xl-3">
+    <div class="stat-card">
+      <div class="stat-icon">🚚</div>
+      <div class="stat-label">In Progress</div>
+      <div class="stat-value">{{ in_progress }}</div>
+      <div class="stat-sub">Driver confirmed</div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-xl-3">
+    <div class="stat-card">
+      <div class="stat-icon">✅</div>
+      <div class="stat-label">Completed</div>
+      <div class="stat-value">{{ completed }}</div>
+      <div class="stat-sub">Turnboy confirmed</div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-xl-3">
+    <div class="stat-card">
+      <div class="stat-icon">👥</div>
+      <div class="stat-label">Active Team</div>
+      <div class="stat-value">{{ active_drivers|add:active_turnboys }}</div>
+      <div class="stat-sub">{{ active_drivers }} drivers + {{ active_turnboys }} turnboys</div>
+    </div>
+  </div>
+</div>
+
+<div class="data-card">
+  <div class="data-card-header">
+    <h2 class="data-card-title">Supervisor Insights</h2>
+    <a href="{% url 'supervisor_deliveries' %}" class="btn btn-sm btn-outline-secondary">View deliveries</a>
+  </div>
+  <div class="row g-3">
+    <div class="col-md-6">
+      <div class="data-card p-3">
+        <h3 class="h6 mb-3">Top Drivers</h3>
+        {% if top_drivers %}
+          <ul class="list-group list-group-flush">
+            {% for item in top_drivers %}
+            <li class="list-group-item d-flex justify-content-between align-items-center py-2">
+              {{ item.driver_name }}
+              <span class="badge bg-primary rounded-pill">{{ item.count }}</span>
+            </li>
+            {% endfor %}
+          </ul>
+        {% else %}
+          <div class="text-muted">No deliveries completed yet.</div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

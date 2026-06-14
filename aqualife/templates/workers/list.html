@@ -1,0 +1,220 @@
+{% extends "base.html" %}
+{% load aqualife_tags %}
+{% block title %}Workers{% endblock %}
+{% block page_title %}Workers{% endblock %}
+
+{% block header_actions %}
+<button class="btn btn-teal btn-sm" data-bs-toggle="modal" data-bs-target="#addWorkerModal">+ Add Worker</button>
+{% endblock %}
+
+{% block content %}
+<form method="get" class="filter-bar">
+  <select name="role" class="form-select form-select-sm" style="max-width:150px;">
+    <option value="">All roles</option>
+    <option value="driver" {% if role_filter == 'driver' %}selected{% endif %}>Driver</option>
+    <option value="turnboy" {% if role_filter == 'turnboy' %}selected{% endif %}>Turnboy</option>
+    <option value="supervisor" {% if role_filter == 'supervisor' %}selected{% endif %}>Supervisor</option>
+  </select>
+  <select name="status" class="form-select form-select-sm" style="max-width:150px;">
+    <option value="">All statuses</option>
+    <option value="active" {% if status_filter == 'active' %}selected{% endif %}>Active</option>
+    <option value="inactive" {% if status_filter == 'inactive' %}selected{% endif %}>Inactive</option>
+  </select>
+  <button type="submit" class="btn btn-sm btn-outline-secondary">Filter</button>
+  {% if role_filter or status_filter %}<a href="{% url 'workers' %}" class="btn btn-sm btn-link text-muted">Clear</a>{% endif %}
+  <span class="ms-auto text-muted" style="font-size:.8rem;">{{ workers|length }} worker{{ workers|length|pluralize }}</span>
+</form>
+
+<div class="data-card">
+  <div class="table-responsive">
+    <table class="table mb-0">
+      <thead>
+        <tr><th>Name</th><th>Account</th><th>Role</th><th>Phone</th><th>Daily Rate</th><th>Vehicle</th><th>Deliveries</th><th>Total Earned</th><th>Status</th><th>Actions</th></tr>
+      </thead>
+      <tbody>
+        {% for w in workers %}
+        <tr>
+          <td>
+            <div class="fw-semibold">{{ w.name }}</div>
+            {% if w.email %}<div class="text-muted" style="font-size:.78rem;">{{ w.email }}</div>{% endif %}
+          </td>
+          <td>
+            {% if w.user %}
+              <div class="fw-semibold">{{ w.user.username }}</div>
+              <div class="text-muted" style="font-size:.78rem;">{{ w.user.email|default:'No email' }}</div>
+            {% else %}
+              <span class="text-muted">No account</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if w.role == 'driver' %}<span class="badge bg-primary">Driver</span>
+            {% elif w.role == 'turnboy' %}<span class="badge bg-info text-dark">Turnboy</span>
+            {% else %}<span class="badge bg-secondary">{{ w.role|title }}</span>{% endif %}
+          </td>
+          <td>{{ w.phone }}</td>
+          <td>KES {{ w.daily_rate|floatformat:0 }}</td>
+          <td class="text-muted" style="font-size:.8rem;">{{ w.vehicle_assigned|default:"—"|truncatechars:20 }}</td>
+          <td class="fw-semibold">{{ w.total_deliveries }}</td>
+          <td>KES {{ w.total_earnings|floatformat:0 }}</td>
+          <td>
+            {% if w.status == 'active' %}<span class="badge bg-success">Active</span>
+            {% else %}<span class="badge bg-secondary">Inactive</span>{% endif %}
+          </td>
+          <td>
+            <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#editWorker{{ w.id }}">Edit</button>
+            <button class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#delWorker{{ w.id }}">Del</button>
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="9" class="text-center text-muted py-4">No workers found.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Add Worker Modal -->
+<div class="modal fade" id="addWorkerModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <form method="post" action="{% url 'worker_create' %}">
+        {% csrf_token %}
+        <div class="modal-header border-0 pb-0"><h5 class="modal-title fw-bold">Add Worker</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+        <div class="modal-body">
+          <div class="mb-3"><label class="form-label fw-semibold">Full Name *</label><input type="text" name="name" class="form-control" required></div>
+          <div class="mb-3"><label class="form-label fw-semibold">Phone *</label><input type="text" name="phone" class="form-control" required></div>
+          <div class="mb-3"><label class="form-label fw-semibold">Email</label><input type="email" name="email" class="form-control"></div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Worker Account</label>
+            <select name="user_id" class="form-select">
+              <option value="">— None —</option>
+              {% for u in users %}
+              <option value="{{ u.id }}">{{ u.username }}{% if u.email %} ({{ u.email }}){% endif %}</option>
+              {% endfor %}
+            </select>
+            <div class="form-text">Choose an existing user account or create a new one below.</div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold">New Username</label>
+            <input type="text" name="new_username" class="form-control" placeholder="Create a new login username">
+          </div>
+          <div class="row g-2 mb-3">
+            <div class="col">
+              <label class="form-label fw-semibold">New Password</label>
+              <input type="password" name="new_password" class="form-control" placeholder="Enter password">
+            </div>
+            <div class="col">
+              <label class="form-label fw-semibold">Confirm Password</label>
+              <input type="password" name="new_password_confirm" class="form-control" placeholder="Repeat password">
+            </div>
+          </div>
+          <div class="row g-2 mb-3">
+            <div class="col">
+              <label class="form-label fw-semibold">Role</label>
+              <select name="role" class="form-select">
+                <option value="driver">Driver</option>
+                <option value="turnboy">Turnboy</option>
+                <option value="supervisor">Supervisor</option>
+              </select>
+            </div>
+            <div class="col">
+              <label class="form-label fw-semibold">Status</label>
+              <select name="status" class="form-select">
+                <option value="active">Active</option>
+                <option value="inactive">Inactive</option>
+              </select>
+            </div>
+          </div>
+          <div class="mb-3"><label class="form-label fw-semibold">Daily Rate (KES)</label><input type="number" name="daily_rate" class="form-control" value="500" min="0" step="0.01"></div>
+          <div class="mb-3"><label class="form-label fw-semibold">License Number</label><input type="text" name="license_number" class="form-control" placeholder="For drivers only"></div>
+          <div class="mb-3"><label class="form-label fw-semibold">Vehicle Assigned</label><input type="text" name="vehicle_assigned" class="form-control" placeholder="e.g. KBZ 456T (Water Tanker)"></div>
+        </div>
+        <div class="modal-footer border-0 pt-0">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-teal">Add Worker</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+{% for w in workers %}
+<div class="modal fade" id="editWorker{{ w.id }}" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <form method="post" action="{% url 'worker_edit' w.id %}">
+        {% csrf_token %}
+        <div class="modal-header border-0 pb-0"><h5 class="modal-title fw-bold">Edit Worker</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+        <div class="modal-body">
+          <div class="mb-3"><label class="form-label fw-semibold">Name</label><input type="text" name="name" class="form-control" value="{{ w.name }}" required></div>
+          <div class="mb-3"><label class="form-label fw-semibold">Phone</label><input type="text" name="phone" class="form-control" value="{{ w.phone }}" required></div>
+          <div class="mb-3"><label class="form-label fw-semibold">Email</label><input type="email" name="email" class="form-control" value="{{ w.email|default:'' }}"></div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Worker Account</label>
+            <select name="user_id" class="form-select">
+              <option value="">— None —</option>
+              {% for u in users %}
+              <option value="{{ u.id }}" {% if w.user and w.user.id == u.id %}selected{% endif %}>{{ u.username }}{% if u.email %} ({{ u.email }}){% endif %}</option>
+              {% endfor %}
+            </select>
+            <div class="form-text">Choose an existing account or create/modify an account below.</div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold">New Username</label>
+            <input type="text" name="new_username" class="form-control" placeholder="Update username or create a new login">
+          </div>
+          <div class="row g-2 mb-3">
+            <div class="col">
+              <label class="form-label fw-semibold">New Password</label>
+              <input type="password" name="new_password" class="form-control" placeholder="Enter a new password">
+            </div>
+            <div class="col">
+              <label class="form-label fw-semibold">Confirm Password</label>
+              <input type="password" name="new_password_confirm" class="form-control" placeholder="Repeat password">
+            </div>
+          </div>
+            <div class="col">
+              <label class="form-label fw-semibold">Role</label>
+              <select name="role" class="form-select">
+                {% for r in "driver,turnboy,supervisor"|split:"," %}
+                <option value="{{ r }}" {% if w.role == r %}selected{% endif %}>{{ r|title }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col">
+              <label class="form-label fw-semibold">Status</label>
+              <select name="status" class="form-select">
+                <option value="active" {% if w.status == 'active' %}selected{% endif %}>Active</option>
+                <option value="inactive" {% if w.status == 'inactive' %}selected{% endif %}>Inactive</option>
+              </select>
+            </div>
+          </div>
+          <div class="mb-3"><label class="form-label fw-semibold">Daily Rate (KES)</label><input type="number" name="daily_rate" class="form-control" value="{{ w.daily_rate }}" step="0.01"></div>
+          <div class="mb-3"><label class="form-label fw-semibold">License Number</label><input type="text" name="license_number" class="form-control" value="{{ w.license_number|default:'' }}"></div>
+          <div class="mb-3"><label class="form-label fw-semibold">Vehicle Assigned</label><input type="text" name="vehicle_assigned" class="form-control" value="{{ w.vehicle_assigned|default:'' }}"></div>
+        </div>
+        <div class="modal-footer border-0 pt-0">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-teal">Save Changes</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+<div class="modal fade" id="delWorker{{ w.id }}" tabindex="-1">
+  <div class="modal-dialog modal-sm">
+    <div class="modal-content">
+      <form method="post" action="{% url 'worker_delete' w.id %}">
+        {% csrf_token %}
+        <div class="modal-header border-0"><h5 class="modal-title fw-bold">Remove Worker?</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+        <div class="modal-body text-muted" style="font-size:.875rem;">Remove <strong>{{ w.name }}</strong> from the system?</div>
+        <div class="modal-footer border-0 pt-0">
+          <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-danger btn-sm">Remove</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endfor %}
+{% endblock %}

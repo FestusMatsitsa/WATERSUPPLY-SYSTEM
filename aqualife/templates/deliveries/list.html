@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% block title %}Deliveries{% endblock %}
+{% block page_title %}Deliveries{% endblock %}
+
+{% block content %}
+<form method="get" class="filter-bar">
+  <select name="status" class="form-select form-select-sm" style="max-width:180px;">
+    <option value="">All statuses</option>
+    <option value="pending" {% if status_filter == 'pending' %}selected{% endif %}>Pending</option>
+    <option value="driver_confirmed" {% if status_filter == 'driver_confirmed' %}selected{% endif %}>Driver Confirmed</option>
+    <option value="completed" {% if status_filter == 'completed' %}selected{% endif %}>Completed</option>
+    <option value="failed" {% if status_filter == 'failed' %}selected{% endif %}>Failed</option>
+  </select>
+  <button type="submit" class="btn btn-sm btn-outline-secondary">Filter</button>
+  {% if status_filter %}<a href="{% url 'deliveries' %}" class="btn btn-sm btn-link text-muted">Clear</a>{% endif %}
+  <span class="ms-auto text-muted" style="font-size:.8rem;">{{ deliveries|length }} delivery record{{ deliveries|length|pluralize }}</span>
+</form>
+
+<!-- Legend -->
+<div class="mb-3 d-flex gap-2 flex-wrap">
+  <span class="badge bg-secondary">Pending — awaiting driver</span>
+  <span class="badge bg-warning text-dark">Driver Confirmed — awaiting turnboy</span>
+  <span class="badge bg-success">Completed — both confirmed</span>
+</div>
+
+<div class="data-card">
+  <div class="table-responsive">
+    <table class="table mb-0">
+      <thead>
+        <tr><th>#</th><th>Customer</th><th>Type</th><th>Driver</th><th>Turnboy</th><th>Amount</th><th>Status</th><th>Location</th><th>Actions</th></tr>
+      </thead>
+      <tbody>
+        {% for d in deliveries %}
+        <tr>
+          <td class="text-muted">{{ d.id }}</td>
+          <td><div class="fw-semibold">{{ d.customer_name }}</div><div class="text-muted" style="font-size:.78rem;">{{ d.created_at|date:"d M Y" }}</div></td>
+          <td><span class="badge bg-info text-dark">{{ d.order_type|default:"—"|title }}</span></td>
+          <td>
+            {{ d.driver_name|default:"—" }}
+            {% if d.driver_confirmed_at %}<br><span class="badge bg-success" style="font-size:.68rem;">✓ Confirmed</span>{% endif %}
+          </td>
+          <td>
+            {{ d.turnboy_name|default:"—" }}
+            {% if d.turnboy_confirmed_at %}<br><span class="badge bg-success" style="font-size:.68rem;">✓ Confirmed</span>{% endif %}
+          </td>
+          <td class="fw-semibold">KES {{ d.amount|floatformat:0 }}</td>
+          <td><span class="badge bg-{{ d.status_badge }}">{{ d.status|title }}</span></td>
+          <td class="text-muted" style="font-size:.8rem;">{{ d.delivery_location|default:"—"|truncatechars:22 }}</td>
+          <td>
+            {% if d.status == 'pending' %}
+              <form method="post" action="{% url 'delivery_driver_confirm' d.id %}" class="d-inline">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-sm btn-warning">Driver ✓</button>
+              </form>
+            {% elif d.status == 'driver_confirmed' %}
+              <form method="post" action="{% url 'delivery_turnboy_confirm' d.id %}" class="d-inline">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-sm btn-success">Turnboy ✓</button>
+              </form>
+            {% else %}
+              <span class="text-muted" style="font-size:.78rem;">—</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="9" class="text-center text-muted py-4">No deliveries found.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

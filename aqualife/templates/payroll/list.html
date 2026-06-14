@@ -1,0 +1,152 @@
+{% extends "base.html" %}
+{% block title %}Payroll{% endblock %}
+{% block page_title %}Payroll{% endblock %}
+
+{% block header_actions %}
+<button class="btn btn-teal btn-sm" data-bs-toggle="modal" data-bs-target="#generateModal">⚡ Generate Payroll</button>
+{% endblock %}
+
+{% block content %}
+<form method="get" class="filter-bar">
+  <input type="date" name="date" value="{{ date_filter }}" class="form-control form-control-sm" style="max-width:170px;">
+  <select name="status" class="form-select form-select-sm" style="max-width:150px;">
+    <option value="">All statuses</option>
+    <option value="pending" {% if status_filter == 'pending' %}selected{% endif %}>Pending</option>
+    <option value="approved" {% if status_filter == 'approved' %}selected{% endif %}>Approved</option>
+    <option value="held" {% if status_filter == 'held' %}selected{% endif %}>Held</option>
+    <option value="paid" {% if status_filter == 'paid' %}selected{% endif %}>Paid</option>
+  </select>
+  <button type="submit" class="btn btn-sm btn-outline-secondary">Filter</button>
+  {% if date_filter or status_filter %}<a href="{% url 'payroll' %}" class="btn btn-sm btn-link text-muted">Clear</a>{% endif %}
+  <span class="ms-auto text-muted" style="font-size:.8rem;">{{ records|length }} record{{ records|length|pluralize }}</span>
+</form>
+
+<div class="data-card">
+  <div class="table-responsive">
+    <table class="table mb-0">
+      <thead>
+        <tr><th>Worker</th><th>Role</th><th>Date</th><th>Base Pay</th><th>Bonuses</th><th>Deductions</th><th>Penalties</th><th>Net Pay</th><th>Status</th><th>Actions</th></tr>
+      </thead>
+      <tbody>
+        {% for r in records %}
+        <tr>
+          <td>
+            <div class="fw-semibold">{{ r.worker_name }}</div>
+            {% if r.admin_comment %}<div class="text-muted" style="font-size:.75rem;">{{ r.admin_comment|truncatechars:30 }}</div>{% endif %}
+          </td>
+          <td><span class="badge bg-secondary">{{ r.worker_role|title }}</span></td>
+          <td class="text-muted">{{ r.period_date|date:"d M Y" }}</td>
+          <td>KES {{ r.base_pay|floatformat:0 }}</td>
+          <td class="text-success">{% if r.bonuses > 0 %}+{{ r.bonuses|floatformat:0 }}{% else %}—{% endif %}</td>
+          <td class="text-danger">{% if r.deductions > 0 %}-{{ r.deductions|floatformat:0 }}{% else %}—{% endif %}</td>
+          <td class="text-danger">{% if r.penalties > 0 %}-{{ r.penalties|floatformat:0 }}{% else %}—{% endif %}</td>
+          <td><strong>KES {{ r.net_pay|floatformat:0 }}</strong></td>
+          <td><span class="badge bg-{{ r.status_badge }}">{{ r.status|title }}</span></td>
+          <td>
+            <div class="d-flex gap-1 flex-wrap">
+              {% if r.status == 'pending' %}
+                <form method="post" action="{% url 'payroll_approve' r.id %}" class="d-inline">
+                  {% csrf_token %}
+                  <button type="submit" class="btn btn-sm btn-teal">✓ Approve</button>
+                </form>
+                <button class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#holdModal{{ r.id }}">Hold</button>
+              {% elif r.status == 'held' %}
+                <form method="post" action="{% url 'payroll_approve' r.id %}" class="d-inline">
+                  {% csrf_token %}
+                  <button type="submit" class="btn btn-sm btn-teal">✓ Pay after review</button>
+                </form>
+              {% endif %}
+              <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#adjModal{{ r.id }}">+ Adjust</button>
+            </div>
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="10" class="text-center text-muted py-4">No payroll records. Click "Generate Payroll" to create records for today.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Generate Modal -->
+<div class="modal fade" id="generateModal" tabindex="-1">
+  <div class="modal-dialog modal-sm">
+    <div class="modal-content">
+      <form method="post" action="{% url 'payroll_generate' %}">
+        {% csrf_token %}
+        <div class="modal-header border-0 pb-0"><h5 class="modal-title fw-bold">Generate Payroll</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+        <div class="modal-body">
+          <label class="form-label fw-semibold">Date</label>
+          <input type="date" name="date" class="form-control" value="{{ today|date:'Y-m-d' }}">
+          <div class="mt-2 text-muted" style="font-size:.8rem;">Creates payroll records for all active workers for the selected date. Skips if records already exist.</div>
+        </div>
+        <div class="modal-footer border-0 pt-0">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-teal">Generate</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Hold / Adjust Modals per record -->
+{% for r in records %}
+<div class="modal fade" id="holdModal{{ r.id }}" tabindex="-1">
+  <div class="modal-dialog modal-sm">
+    <div class="modal-content">
+      <form method="post" action="{% url 'payroll_hold' r.id %}">
+        {% csrf_token %}
+        <div class="modal-header border-0 pb-0"><h5 class="modal-title fw-bold">Hold Payment</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+        <div class="modal-body">
+          <div class="mb-2 text-muted" style="font-size:.875rem;">Hold payment for <strong>{{ r.worker_name }}</strong>?</div>
+          <label class="form-label fw-semibold">Reason (optional)</label>
+          <textarea name="reason" class="form-control" rows="2" placeholder="Reason for hold…"></textarea>
+        </div>
+        <div class="modal-footer border-0 pt-0">
+          <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-danger btn-sm">Hold</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="adjModal{{ r.id }}" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <form method="post" action="{% url 'payroll_adjust' r.id %}">
+        {% csrf_token %}
+        <div class="modal-header border-0 pb-0"><h5 class="modal-title fw-bold">Add Adjustment — {{ r.worker_name }}</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Type</label>
+            <select name="adj_type" class="form-select">
+              <option value="bonus">Bonus (+)</option>
+              <option value="deduction">Deduction (−)</option>
+              <option value="penalty">Penalty (−)</option>
+            </select>
+          </div>
+          <div class="mb-3"><label class="form-label fw-semibold">Amount (KES)</label><input type="number" name="amount" class="form-control" min="0" step="0.01" required></div>
+          <div class="mb-3"><label class="form-label fw-semibold">Comment</label><input type="text" name="comment" class="form-control" placeholder="Reason…"></div>
+          {% if r.adjustments %}
+          <div class="mt-2">
+            <div class="fw-semibold mb-1" style="font-size:.8rem;">Existing adjustments:</div>
+            {% for adj in r.adjustments %}
+            <div class="d-flex justify-content-between" style="font-size:.8rem;color:#64748b;">
+              <span>{{ adj.type|title }}: {{ adj.comment|default:"—" }}</span>
+              <span class="{% if adj.type == 'bonus' %}text-success{% else %}text-danger{% endif %}">KES {{ adj.amount }}</span>
+            </div>
+            {% endfor %}
+          </div>
+          {% endif %}
+        </div>
+        <div class="modal-footer border-0 pt-0">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-teal">Apply Adjustment</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endfor %}
+{% endblock %}

@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
+
+{% block content %}
+<!-- Stat cards row 1 -->
+<div class="row g-3 mb-3">
+  <div class="col-sm-6 col-xl-3">
+    <div class="stat-card">
+      <div class="stat-icon">
+        <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+      </div>
+      <div class="stat-label">Today's Revenue</div>
+      <div class="stat-value">KES {{ today_revenue|floatformat:0 }}</div>
+      <div class="stat-sub">
+        {% if revenue_change >= 0 %}
+          <span class="text-success">+{{ revenue_change }}%</span>
+        {% else %}
+          <span class="text-danger">{{ revenue_change }}%</span>
+        {% endif %}
+        from yesterday
+      </div>
+    </div>
+  </div>
+
+  <div class="col-sm-6 col-xl-3">
+    <div class="stat-card">
+      <div class="stat-icon">
+        <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><rect x="1" y="3" width="15" height="13" rx="1"/><path d="M16 8h4l3 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+      </div>
+      <div class="stat-label">Today's Deliveries</div>
+      <div class="stat-value">{{ today_deliveries }}</div>
+      <div class="stat-sub">{{ completed_today }} completed</div>
+    </div>
+  </div>
+
+  <div class="col-sm-6 col-xl-3">
+    <div class="stat-card">
+      <div class="stat-icon">
+        <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+      </div>
+      <div class="stat-label">Active Orders</div>
+      <div class="stat-value">{{ active_orders }}</div>
+      <div class="stat-sub">Needs processing</div>
+    </div>
+  </div>
+
+  <div class="col-sm-6 col-xl-3">
+    <div class="stat-card alert-card">
+      <div class="stat-icon">
+        <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      </div>
+      <div class="stat-label">Low Stock Alerts</div>
+      <div class="stat-value">{{ low_stock }}</div>
+      <div class="stat-sub">Requires attention</div>
+    </div>
+  </div>
+</div>
+
+<!-- Stat cards row 2 -->
+<div class="row g-3 mb-4">
+  <div class="col-sm-6 col-xl-3">
+    <div class="stat-card">
+      <div class="stat-icon">
+        <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      </div>
+      <div class="stat-label">Total Customers</div>
+      <div class="stat-value">{{ total_customers }}</div>
+      <div class="stat-sub">Active accounts</div>
+    </div>
+  </div>
+
+  <div class="col-sm-6 col-xl-3">
+    <div class="stat-card">
+      <div class="stat-icon">
+        <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+      </div>
+      <div class="stat-label">Workers on Duty</div>
+      <div class="stat-value">{{ workers_on_duty }}</div>
+      <div class="stat-sub">Active staff</div>
+    </div>
+  </div>
+
+  <div class="col-sm-6 col-xl-3">
+    <div class="stat-card">
+      <div class="stat-icon">
+        <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/></svg>
+      </div>
+      <div class="stat-label">Pending Payroll</div>
+      <div class="stat-value">KES {{ pending_payroll|floatformat:0 }}</div>
+      <div class="stat-sub">Awaiting approval</div>
+    </div>
+  </div>
+</div>
+
+<!-- Recent activity -->
+<div class="data-card">
+  <div class="data-card-header">
+    <h2 class="data-card-title">Recent Activity</h2>
+    <a href="{% url 'analytics' %}" class="btn btn-sm btn-outline-secondary">View analytics →</a>
+  </div>
+  <div class="px-3 py-2">
+    {% for activity in recent_activity %}
+      <div class="activity-item">
+        <div class="activity-dot"></div>
+        <div>
+          <div class="activity-text">{{ activity.description }}</div>
+          <div class="activity-time">{{ activity.actor }} · {{ activity.created_at|timesince }} ago</div>
+        </div>
+      </div>
+    {% empty %}
+      <div class="text-center py-4 text-muted" style="font-size:.875rem;">No recent activity.</div>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

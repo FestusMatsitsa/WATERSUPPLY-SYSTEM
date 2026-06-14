@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% block title %}Field Dashboard{% endblock %}
+{% block page_title %}Field Dashboard{% endblock %}
+
+{% block content %}
+<div class="row g-3 mb-4">
+  <div class="col-sm-6 col-xl-3">
+    <div class="stat-card">
+      <div class="stat-icon">🚚</div>
+      <div class="stat-label">Assigned Deliveries</div>
+      <div class="stat-value">{{ deliveries|length }}</div>
+      <div class="stat-sub">Upcoming and recent work</div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-xl-3">
+    <div class="stat-card">
+      <div class="stat-icon">⏳</div>
+      <div class="stat-label">Awaiting Action</div>
+      <div class="stat-value">{{ pending_count }}</div>
+      <div class="stat-sub">Needs your confirmation</div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-xl-3">
+    <div class="stat-card">
+      <div class="stat-icon">✅</div>
+      <div class="stat-label">Completed</div>
+      <div class="stat-value">{{ completed_count }}</div>
+      <div class="stat-sub">Confirmed deliveries</div>
+    </div>
+  </div>
+</div>
+
+<div class="data-card">
+  <div class="data-card-header">
+    <h2 class="data-card-title">My Deliveries</h2>
+    <a href="{% url 'field_deliveries' %}" class="btn btn-sm btn-outline-secondary">View all</a>
+  </div>
+  <div class="table-responsive">
+    <table class="table mb-0">
+      <thead>
+        <tr><th>#</th><th>Customer</th><th>Location</th><th>Status</th><th>Amount</th><th>Action</th></tr>
+      </thead>
+      <tbody>
+        {% for delivery in deliveries|slice:":6" %}
+        <tr>
+          <td>{{ delivery.id }}</td>
+          <td>{{ delivery.customer_name }}</td>
+          <td>{{ delivery.delivery_location|default:'—' }}</td>
+          <td><span class="badge bg-{{ delivery.status_badge }}">{{ delivery.status|title|replace:'_',' ' }}</span></td>
+          <td>KES {{ delivery.amount|floatformat:0 }}</td>
+          <td>
+            {% if worker.role == 'driver' and delivery.status == 'pending' %}
+              <form method="post" action="{% url 'field_delivery_confirm' delivery.id %}">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-sm btn-warning">Confirm</button>
+              </form>
+            {% elif worker.role == 'turnboy' and delivery.status == 'driver_confirmed' %}
+              <form method="post" action="{% url 'field_delivery_confirm' delivery.id %}">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-sm btn-success">Confirm</button>
+              </form>
+            {% else %}
+              <span class="text-muted">—</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="6" class="text-center text-muted py-4">No deliveries assigned yet.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
